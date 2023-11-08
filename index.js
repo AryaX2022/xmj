@@ -27,24 +27,24 @@ const cors = require('cors');
 app.use(cors());
 
 
-var con = mysql.createPool({
-    host: "localhost",
-    user: "root",
-    password: "123456",
-    database: "vvvv",
-    multipleStatements: true
-});
 // var con = mysql.createPool({
-//     host: "207.154.246.219",
-//     user: "well-informed-knife-ned",
-//     password: process.env.DB_PWD,
-//     database: "well_informed_knife_ned_db",
+//     host: "localhost",
+//     user: "root",
+//     password: "123456",
+//     database: "vvvv",
 //     multipleStatements: true
 // });
+var con = mysql.createPool({
+    host: "207.154.246.219",
+    user: "well-informed-knife-ned",
+    password: process.env.DB_PWD,
+    database: "well_informed_knife_ned_db",
+    multipleStatements: true
+});
 
 
 app.get("/", async function(request, response) {
-    response.json("Live");
+    response.json("XMJ Live");
 });
 
 
