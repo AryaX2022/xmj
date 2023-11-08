@@ -15,7 +15,7 @@ var transporter = nodemailer.createTransport({
     service: 'qq',
     auth: {
         user: '6983299@qq.com',
-        pass: 'zduhlnaprqymbjgd'
+        pass: process.env.MAIL_PWD
     }
 });
 
@@ -35,10 +35,10 @@ var con = mysql.createPool({
     multipleStatements: true
 });
 // var con = mysql.createPool({
-//     host: "104.236.24.119",
-//     user: "strange-necessary-hiv",
-//     password: "Oq4gW7F2yLo63Sc)_(",
-//     database: "strange_necessary_hiv_db",
+//     host: "207.154.246.219",
+//     user: "well-informed-knife-ned",
+//     password: process.env.DB_PWD,
+//     database: "well_informed_knife_ned_db",
 //     multipleStatements: true
 // });
 
@@ -48,48 +48,8 @@ app.get("/", async function(request, response) {
 });
 
 
-//最新，最热
-app.get('/books', async function (request, response) {
-    con.query("SELECT * FROM books order by id desc limit 30", function (err, result, fields) {
-        if (err) throw err;
-        response.json(result);
-    });
-
-});
-
-app.get('/bookshot', async function (request, response) {
-    con.query("select b.*, d.vw_init+d.vw vw, d.dl_init+d.dl dl, d.score from docdata d inner join books b on d.zyid = b.id order by d.vw desc limit 6", function (err, result, fields) {
-        if (err) throw err;
-        response.json(result);
-    });
-
-});
-
-//根据tag获取最热书籍排行
-app.post('/bookshots', async function (request, response) {
-    con.query("select b.*, d.vw_init+d.vw vw, d.dl_init+d.dl dl, d.score from docdata d " +
-        "inner join (select id,catagory,site,token,title,cover_img,pdf_size,epub_size,mobi_size from books where order_hot is not null) b" +
-        " on d.zyid = b.id", function (err, result, fields) {
-        if (err) throw err;
-        response.json(result);
-    });
-});
-
-
 app.post('/booksbycat/total', jsonParser,async function (request, response) {
-    let sql = "SELECT count(*) total FROM fvvv where title like '%" + request.body.cat + "%'";
-
-    if(request.body.cat.toLowerCase() === "hot") {
-        sql = "SELECT count(*) total FROM fvvv where (title like '%女神%' or title like '%美女%' or title like '%极品%') and (title like '%干%' or  title like '%操%')";
-    }
-
-    if(request.body.cat.toLowerCase() === "潮喷") {
-        sql = "SELECT count(*) total FROM fvvv where where title like '%潮喷%' or title like '%高潮%'";
-    }
-
-    if(request.body.cat.toLowerCase() === "所有") {
-        sql = "SELECT count(*) total FROM fvvv";
-    }
+    let sql = "SELECT count(*) total FROM fvvv " + request.body.cat;
 
     con.query(sql, function (err, result, fields) {
         if (err) throw err;
@@ -104,19 +64,7 @@ app.post('/booksbycat/:page', jsonParser, async function (request, response) {
     let pagenumber = request.params.page;
 
     let offset = pagesize*(pagenumber-1);
-    let sql = "SELECT * FROM fvvv where title like '%" + request.body.cat +  "%' order by id desc limit " + pagesize.toString() +  " OFFSET " + offset.toString();
-
-    if(request.body.cat.toLowerCase() === "hot") {
-        sql = "SELECT * FROM fvvv where (title like '%女神%' or title like '%美女%' or title like '%极品%') and (title like '%干%' or  title like '%操%') order by id desc limit " + pagesize.toString() +  " OFFSET " + offset.toString();
-    }
-
-    if(request.body.cat.toLowerCase() === "潮喷") {
-        sql = "SELECT * FROM fvvv where title like '%潮喷%' or title like '%高潮%' order by id desc limit " + pagesize.toString() +  " OFFSET " + offset.toString();
-    }
-
-    if(request.body.cat.toLowerCase() === "所有") {
-        sql = "SELECT * FROM fvvv order by id desc limit " + pagesize.toString() +  " OFFSET " + offset.toString();
-    }
+    let sql = "SELECT * FROM fvvv " + request.body.cat +  " order by id desc limit " + pagesize.toString() +  " OFFSET " + offset.toString();
 
     //console.log(sql);
     con.query(sql, function (err, result, fields) {
@@ -126,12 +74,22 @@ app.post('/booksbycat/:page', jsonParser, async function (request, response) {
 
 });
 
-app.post('/getsdatabyids', jsonParser, async function (request, response) {
-    let sql = "select * from sdata where vid in (?)";
-    console.log(request.body.vids.toString());
+app.post('/getproductsbyids', jsonParser, async function (request, response) {
+    let sql = "select * from fvvv where id in (?)";
+    console.log(request.body.vids);
     con.query(sql, [request.body.vids], function (err, result, fields) {
         if (err) throw err;
-        console.log(result);
+        //console.log(result);
+        response.json(result);
+    });
+});
+
+app.post('/getsdatabyids', jsonParser, async function (request, response) {
+    let sql = "select * from sdata where vid in (?)";
+    console.log(request.body.vids);
+    con.query(sql, [request.body.vids], function (err, result, fields) {
+        if (err) throw err;
+        //console.log(result);
         response.json(result);
     });
 });
@@ -140,11 +98,10 @@ app.post('/getsdatabyids', jsonParser, async function (request, response) {
 
 //详情页：推荐
 app.post('/recommend', jsonParser, async function (request, response) {
-    //let pagesize = 5;
 
-    let sql = "SELECT * FROM fvvv where title not like '%" + request.body.cat +  "%' ORDER BY rand() limit 5";
+    let sql = "SELECT * FROM fvvv where id !=? ORDER BY rand() limit 5";
     //console.log(sql);
-    con.query(sql, function (err, result, fields) {
+    con.query(sql, [request.body.vid], function (err, result, fields) {
         if (err) throw err;
         response.json(result);
     });
@@ -230,61 +187,6 @@ app.get('/book/:id', async function(request, response) {
         response.json(result);
     });
 });
-
-
-app.get('/books/total', async function (request, response) {
-    con.query("SELECT count(*) total FROM books", function (err, result, fields) {
-        if (err) throw err;
-        //console.log(parseInt(result[0]['total']/pagesize));
-        response.json(parseInt(result[0]['total']/pagesize));
-    });
-});
-
-//分页
-app.get('/books/:page', async function (request, response) {
-	//let pagesize = 5;
-	let pagenumber = request.params.page;
-
-	offset = pagesize*(pagenumber-1);
-
-    con.query("SELECT * FROM books order by id desc limit " + pagesize + " OFFSET " + offset , function (err, result, fields) {
-        if (err) throw err;
-        response.json(result);
-    });
-
-});
-
-app.post('/docdata', jsonParser, async function (request, response) {
-    const zyids = request.body.zyids;
-    console.log(zyids.toString());
-    con.query("SELECT zyid, vw_init+vw vw, dl_init+dl dl, score FROM docdata where zyid in (?)", [zyids], function (err, result, fields) {
-        if (err) throw err;
-        console.log(result);
-        response.json(result);
-    });
-});
-
-
-
-app.post("/userview", jsonParser, function(req, res) {
-    const zyid = req.body.zyid;
-    con.query("INSERT into docdata(zyid,vw) values(?,1) on DUPLICATE KEY UPDATE vw = vw + 1", [zyid.toString()], function (err, result, fields) {
-        if (err) throw err;
-        //console.log(result);
-        res.json({ret:1});
-    });
-});
-app.post("/usermark", jsonParser, function(req, res) {
-    const zyid = req.body.zyid;
-    const score = req.body.score;
-    con.query("INSERT into docdata(zyid,sr) values(?,1) on DUPLICATE KEY UPDATE sr = sr + 1;INSERT into docdata(zyid,score) values(?,?) on DUPLICATE KEY UPDATE score = (score + ?)/2;", [zyid, zyid, score, score], function (err, result, fields) {
-        if (err) throw err;
-        //console.log(result);
-        res.json({ret:1});
-    });
-});
-
-
 
 
 function sendmail(to, subject, htmlContent) {
